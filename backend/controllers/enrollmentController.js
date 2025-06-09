@@ -26,18 +26,22 @@ const enrollStudent = async (req, res) => {
 
 // Get list of enrolled courses by specific student
 const getEnrolledCourses = async (req, res) => {
+  
   try {
     const studentId = req.user.id;
 
     const enrollments = await Enrollment.find({ student: studentId }).populate('course');
 
-    const courses = enrollments.map(enrollment => ({
-        courseId: enrollment.course._id,
-        title: enrollment.course.title,
-        description: enrollment.course.description,
-        enrolledAt: enrollment.enrolledAt,
-        progress: enrollment.progress
-      }));
+  const courses = enrollments
+  .filter(enrollment => enrollment.course !== null)
+  .map(enrollment => ({
+    courseId: enrollment.course._id,
+    title: enrollment.course.title,
+    description: enrollment.course.description,
+    enrolledAt: enrollment.enrolledAt,
+    progress: enrollment.progress
+  }));
+
 
     res.status(200).json({ courses });
 } catch (error) {

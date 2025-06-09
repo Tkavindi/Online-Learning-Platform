@@ -1,5 +1,6 @@
 const Course = require('../models/courseModel');
 const User = require('../models/userModel');
+const Enrollment = require('../models/enrollmentModel');
 
 
 // Create a new course 
@@ -124,18 +125,31 @@ const getCoursesByInstructor = async (req, res) => {
 
 // Get all courses
 const getAllCourses = async (req, res) => {
-    try{
+    const userId = req.user.id;
+
+    try {
         const courses = await Course.find();
         if (courses.length === 0) {
             return res.status(404).json({ message: 'No courses found' });
         }
-        res.status(200).json({ courses });
-    }
-    catch (error) {
+
+        // Fetch all enrollments for the current user
+        const enrollments = await Enrollment.find({ student: userId });
+        const enrolledCourseIds = new Set(enrollments.map(e => e.course.toString()));
+
+        // Map through courses and mark enrollment status
+        const coursesWithEnrollment = courses.map(course => ({
+            ...course.toObject(),
+            isEnrolled: enrolledCourseIds.has(course._id.toString())
+        }));
+
+        res.status(200).json({ courses: coursesWithEnrollment });
+    } catch (error) {
         console.error('Get All Courses Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
+
 
 
 module.exports = {
