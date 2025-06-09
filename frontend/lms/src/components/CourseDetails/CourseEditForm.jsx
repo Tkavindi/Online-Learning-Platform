@@ -1,4 +1,3 @@
-// Course Edit Form Component
 import React, { useState } from 'react';
 
 const CourseEditForm = ({ course, onSubmit, onCancel }) => {

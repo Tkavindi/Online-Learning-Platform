@@ -1,5 +1,5 @@
 import React from 'react';
-// Dialog Component
+
 const Dialog = ({ show, type, title, message, onClose }) => {
     if (!show) return null;
 

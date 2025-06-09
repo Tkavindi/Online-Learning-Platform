@@ -1,6 +1,5 @@
-
 import React from 'react';
-// Delete Confirmation Dialog Component
+
 const DeleteDialog = ({ show, courseName, onConfirm, onCancel }) => {
     if (!show) return null;
 

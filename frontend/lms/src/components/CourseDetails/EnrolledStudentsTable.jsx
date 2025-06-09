@@ -1,5 +1,5 @@
 import React from 'react';
-// Enrolled Students Table Component
+
 const EnrolledStudentsTable = ({ students, loading }) => {
 
     const formatDateTime = (dateString) =>

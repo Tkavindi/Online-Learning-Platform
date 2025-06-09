@@ -1,4 +1,3 @@
-// src/components/CourseForm.jsx
 import React, { useState } from "react";
 
 const CourseForm = ({ isEditing, onSubmit, onCancel, initialData, showDialog }) => {
