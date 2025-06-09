@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 const LandingPage = () => {
   return (
-    <div className="min-h-[70vh] bg-white text-black">
+    <div className="min-h-[80vh] bg-white text-black">
       
       {/* Hero Section */}
       <div className="relative px-6 py-20 lg:px-12">
