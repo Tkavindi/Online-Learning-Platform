@@ -5,7 +5,7 @@ WiseLearn is an **AI-powered online learning platform** that offers course creat
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```bash
 wislearn/
@@ -16,7 +16,7 @@ wislearn/
 
 ---
 
-## 1. 🚀 Project Overview
+## 1. Project Overview
 
 WiseLearn enables instructors to create courses and students to enroll, interact, and receive intelligent course suggestions using AI. The platform integrates:
 - Role-based authentication
@@ -26,7 +26,7 @@ WiseLearn enables instructors to create courses and students to enroll, interact
 
 ---
 
-## 2. ⚙️ Tech Stack & Requirements
+## 2. Tech Stack & Requirements
 
 ### Backend
 - Node.js (>=18)
@@ -45,13 +45,13 @@ WiseLearn enables instructors to create courses and students to enroll, interact
 
 ---
 
-## 3. 🧰 Setup Instructions
+## 3. Setup Instructions
 
-### 📦 Backend
+### Backend
 
 ```bash
 # 1. Clone the repository
-git clone <repository-url>
+git clone https://github.com/Tkavindi/Online-Learning-Platform.git
 cd backend
 
 # 2. Install dependencies
@@ -68,7 +68,7 @@ OPENAI_API_KEY=your_openai_api_key
 npm run dev
 ```
 
-### 🌐 Frontend
+### Frontend
 
 ```bash
 # 1. Navigate to frontend
@@ -88,30 +88,30 @@ npm run dev
 
 ---
 
-## 4. 🧪 API Endpoints
+## 4. API Endpoints
 
-### 🔐 Authentication
+### Authentication
 - `POST /api/users/register` – Register a new user  
 - `POST /api/users/login` – Login existing user
 
-### 📚 Courses
+### Courses
 - `GET /api/courses` – List all courses  
 - `GET /api/courses/:id` – Get course by ID  
 - `POST /api/courses` – Create course (Instructor only)  
 - `PUT /api/courses/:id` – Update course (Instructor only)  
 - `DELETE /api/courses/:id` – Delete course (Instructor only)
 
-### 📝 Enrollments
+### Enrollments
 - `POST /api/enrollments/:courseId` – Enroll in course  
 - `GET /api/enrollments` – Get user's enrolled courses  
 - `GET /api/enrollments/:courseId` – Get all students enrolled in a course
 
-### 🤖 AI Integration
+### AI Integration
 - `POST /api/gpt/recommend` – Get course recommendations
 
 ---
 
-## 5. 🌍 Environment Variables
+## 5. Environment Variables
 
 ### Backend `.env`
 ```env
@@ -127,16 +127,16 @@ VITE_BASE_URL=http://localhost:3000
 
 ---
 
-## 6. 🚀 Deployment
+## 6. Deployment
 
-### 🛠 Backend
+### Backend
 - Hosted on Fly.io
 - Config file: `fly.toml`
 ```bash
 fly deploy
 ```
 
-### 🌐 Frontend
+### Frontend
 - Hosted on Vercel
 - Config file: `vercel.json`
 ```bash
@@ -145,7 +145,7 @@ vercel
 
 ---
 
-## 7. 🧱 Project Structure
+## 7. Project Structure
 
 ### Backend
 ```
@@ -178,21 +178,21 @@ frontend/
 
 ---
 
-## 8. 🎯 Features
+## 8. Features
 
-- 🔐 JWT Authentication
-- 👥 Role-based access (Student / Instructor)
-- 📚 Dynamic Course Management
-- 📝 Enrollment & Progress Tracking
-- 🤖 AI Recommendations (OpenAI GPT)
-- 💬 AI Chat Assistant
-- 📱 Responsive Design
+-  JWT Authentication
+-  Role-based access (Student / Instructor)
+-  Dynamic Course Management
+-  Enrollment & Progress Tracking
+-  AI Recommendations (OpenAI GPT)
+-  AI Chat Assistant
+-  Responsive Design
 
 ---
 
-## 9. 🧩 System Design
+## 9.  System Design
 
-### 📘 MongoDB Schema
+### MongoDB Schema
 
 #### 1. **User**
 ```json
@@ -230,7 +230,7 @@ frontend/
 }
 ```
 
-### 🔗 Relationships
+###  Relationships
 - `User` → `Courses` (1:n, instructor creates)
 - `User` → `Enrollments` (1:n, student enrolls)
 - `Course` → `Enrollments` (1:n)
