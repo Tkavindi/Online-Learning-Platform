@@ -6,12 +6,19 @@ import CourseDetailsPage from "./pages/CourseDetailsPage";
 import EnrolledCoursesPage from "./pages/EnrolledCoursesPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleBasedRoute from "./routes/RoleBasedRoute";
+import LandingPage from "./pages/LandingPage";
+import NavBar from "./components/NavBar";
+import Footer from "./components/Footer";
+import Chatbot from "./components/ChatBot";
+
 
 function App() {
   return (
     <>
-      <h1 className="text-xl font-bold">Hello world</h1>
+      
+      <NavBar/>
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
 
@@ -20,6 +27,7 @@ function App() {
           element={
             <ProtectedRoute>
               <CoursePage />
+              <Chatbot />
             </ProtectedRoute>
           }
         />
@@ -29,6 +37,7 @@ function App() {
           element={
             <ProtectedRoute>
               <CourseDetailsPage />
+              <Chatbot />
             </ProtectedRoute>
           }
         />
@@ -38,10 +47,13 @@ function App() {
           element={
             <RoleBasedRoute allowedRoles={["student"]}>
               <EnrolledCoursesPage />
+              <Chatbot />
             </RoleBasedRoute>
           }
         />
       </Routes>
+      
+      <Footer/>
     </>
   );
 }

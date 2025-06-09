@@ -299,6 +299,7 @@ const CoursePage = () => {
         onCancel={closeDeleteConfirmation}
       />
       <Dialog show={dialog.show} type={dialog.type} title={dialog.title} message={dialog.message} onClose={closeDialog} />
+      
     </div>
   );
 };
