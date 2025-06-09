@@ -3,6 +3,7 @@ import RegisterPage from "./pages/RegisterPage";
 import LoginPage from "./pages/LoginPage";
 import CoursePage from "./pages/CoursePage";
 import CourseDetailsPage from "./pages/CourseDetailsPage";
+import EnrolledCoursesPage from "./pages/EnrolledCoursesPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleBasedRoute from "./routes/RoleBasedRoute";
 
@@ -29,6 +30,15 @@ function App() {
             <ProtectedRoute>
               <CourseDetailsPage />
             </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/enrolled-courses"
+          element={
+            <RoleBasedRoute allowedRoles={["student"]}>
+              <EnrolledCoursesPage />
+            </RoleBasedRoute>
           }
         />
       </Routes>
