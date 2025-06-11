@@ -38,7 +38,7 @@ const CoursePage = () => {
     } catch (err) {
       if (err.response?.status === 404) {
         setCourses([]);
-        setError("");
+        setError(""); // Don't show error for empty list
       } else {
         console.error("Error fetching instructor courses:", err.response?.data || err.message);
         setError("Failed to load courses. Please try again.");
@@ -202,7 +202,8 @@ const CoursePage = () => {
     );
   }
 
-  if (error && !courses.length) {
+  // Show error only when there's a real error (not just empty course list)
+  if (error && courses.length === 0) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-6">
         <div className="text-center max-w-md">
