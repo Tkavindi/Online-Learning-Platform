@@ -17,27 +17,37 @@ const CoursePage = () => {
   const BASE_URL = import.meta.env.VITE_BASE_URL;
 
   useEffect(() => {
-    if (token) {
+    if (token && user) {
       fetchCourses();
     }
-  }, [token]);
+  }, [token, user]);
 
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      setError(""); // Reset error state
-      const response = await axios.get(`${BASE_URL}/api/courses/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = response.data?.courses || response.data || [];
+      setError("");
+
+      let response;
+
+      if (user.role === "instructor") {
+        response = await axios.get(`${BASE_URL}/api/courses/instructor/${user._id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } else {
+        response = await axios.get(`${BASE_URL}/api/courses/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+
+      const data = response.data?.courses || [];
       setCourses(Array.isArray(data) ? data : []);
     } catch (err) {
       const status = err.response?.status;
       if (status && status !== 404) {
-        console.error("Error fetching courses:", err.response?.data || err.message);
         setError("Failed to load courses. Please try again.");
+        console.error(err);
       } else {
-        setCourses([]); // Gracefully handle empty courses
+        setCourses([]);
         setError("");
       }
     } finally {
@@ -49,31 +59,23 @@ const CoursePage = () => {
     setDialog({ show: true, type, title, message });
   };
 
-  const closeDialog = () => {
-    setDialog({ show: false, type: "", message: "", title: "" });
-  };
+  const closeDialog = () => setDialog({ show: false, type: "", message: "", title: "" });
 
   const showDeleteConfirmation = (courseId, courseTitle, e) => {
     e.stopPropagation();
     setDeleteConfirm({ show: true, courseId, courseTitle });
   };
 
-  const closeDeleteConfirmation = () => {
-    setDeleteConfirm({ show: false, courseId: "", courseTitle: "" });
-  };
+  const closeDeleteConfirmation = () => setDeleteConfirm({ show: false, courseId: "", courseTitle: "" });
 
-  const handleCourseClick = (courseId) => {
-    navigate(`/courses/${courseId}`);
-  };
+  const handleCourseClick = (courseId) => navigate(`/courses/${courseId}`);
 
   const handleEnroll = async (courseId, courseTitle, e) => {
     e.stopPropagation();
     try {
-      await axios.post(
-        `${BASE_URL}/api/enrollments/${courseId}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await axios.post(`${BASE_URL}/api/enrollments/${courseId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       showDialog("success", "Enrollment Successful!", `You have enrolled in "${courseTitle}".`);
       fetchCourses();
     } catch (err) {
@@ -133,21 +135,13 @@ const CoursePage = () => {
   const DeleteConfirmationDialog = ({ show, courseTitle, onConfirm, onCancel }) => {
     if (!show) return null;
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-          <div className="p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Confirm Delete</h3>
-            <p className="text-sm text-gray-600 mb-6">
-              Are you sure you want to delete the course <strong>"{courseTitle}"</strong>? This action is permanent.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button onClick={onCancel} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:border-gray-400">
-                Cancel
-              </button>
-              <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700">
-                Delete Course
-              </button>
-            </div>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded shadow-lg max-w-md w-full">
+          <h2 className="text-lg font-semibold mb-4">Confirm Deletion</h2>
+          <p className="mb-6">Are you sure you want to delete <strong>{courseTitle}</strong>?</p>
+          <div className="flex justify-end space-x-3">
+            <button onClick={onCancel} className="px-4 py-2 border rounded">Cancel</button>
+            <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white rounded">Delete</button>
           </div>
         </div>
       </div>
@@ -157,133 +151,91 @@ const CoursePage = () => {
   const Dialog = ({ show, type, title, message, onClose }) => {
     if (!show) return null;
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-          <div className="p-6">
-            <div className="flex items-center mb-4">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${type === "success" ? "bg-green-100" : "bg-red-100"}`}>
-                <svg className={`w-5 h-5 ${type === "success" ? "text-green-600" : "text-red-600"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={type === "success" ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12"} />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900">{title}</h3>
-            </div>
-            <p className="text-sm text-gray-600 mb-6">{message}</p>
-            <div className="flex justify-end">
-              <button onClick={onClose} className={`px-4 py-2 text-sm rounded-lg text-white ${type === "success" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}>
-                OK
-              </button>
-            </div>
-          </div>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded shadow-lg max-w-md w-full">
+          <h2 className={`text-lg font-semibold mb-2 ${type === "success" ? "text-green-600" : "text-red-600"}`}>
+            {title}
+          </h2>
+          <p className="mb-4">{message}</p>
+          <button onClick={onClose} className={`px-4 py-2 text-white rounded ${type === "success" ? "bg-green-600" : "bg-red-600"}`}>
+            OK
+          </button>
         </div>
       </div>
     );
   };
 
-  const displayCourses = user?.role === "instructor"
-    ? courses
-    : courses;
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-t-2 border-black rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading courses...</p>
-        </div>
+      <div className="flex justify-center items-center min-h-screen">
+        <p className="text-gray-500">Loading courses...</p>
       </div>
     );
   }
 
   if (error && !courses.length) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6">
-        <div className="text-center max-w-md">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button onClick={fetchCourses} className="px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800">
-            Try Again
-          </button>
-        </div>
+      <div className="flex justify-center items-center min-h-screen flex-col">
+        <p className="text-red-500 mb-4">{error}</p>
+        <button onClick={fetchCourses} className="px-4 py-2 bg-black text-white rounded">Try Again</button>
       </div>
     );
   }
 
+  const isInstructor = user?.role === "instructor";
+  const hasNoCourses = courses.length === 0;
+
   return (
     <div className="min-h-screen bg-white">
-      <div className="border-b border-gray-100">
-        <div className="max-w-4xl mx-auto px-6 py-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-light text-gray-900 mb-2">
-              {user?.role === "instructor" ? "My Courses" : "Available Courses"}
-            </h1>
-            <p className="text-sm text-gray-500">
-              {displayCourses.length} course{displayCourses.length !== 1 ? "s" : ""}
-              {user?.role === "instructor" ? " created" : " available"}
-            </p>
-          </div>
-          {user?.role === "instructor" && (
-            <button onClick={() => setShowCreateForm(true)} className="px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800">
-              Create Course
-            </button>
-          )}
+      <div className="max-w-4xl mx-auto py-8 px-4 flex justify-between items-center border-b">
+        <div>
+          <h1 className="text-2xl font-semibold">{isInstructor ? "My Courses" : "Available Courses"}</h1>
+          <p className="text-sm text-gray-500">{courses.length} course{courses.length !== 1 ? "s" : ""} {isInstructor ? "created" : "available"}</p>
         </div>
+        {isInstructor && (
+          <button onClick={() => setShowCreateForm(true)} className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800">
+            Create Course
+          </button>
+        )}
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        {displayCourses.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">
-              {user?.role === "instructor" ? "You haven't created any courses yet." : "No courses available yet."}
-            </p>
-            {user?.role === "instructor" && (
-              <button onClick={() => setShowCreateForm(true)} className="px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800">
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-4">
+        {hasNoCourses ? (
+          <div className="text-center text-gray-500">
+            <p className="mb-4">{isInstructor ? "You haven't created any courses yet." : "No courses available."}</p>
+            {isInstructor && (
+              <button onClick={() => setShowCreateForm(true)} className="px-4 py-2 bg-black text-white rounded">
                 Create First Course
               </button>
             )}
           </div>
         ) : (
-          displayCourses.map((course) => (
+          courses.map((course) => (
             <div
               key={course._id}
-              className="border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors cursor-pointer"
+              className="p-4 border rounded hover:shadow cursor-pointer transition"
               onClick={() => handleCourseClick(course._id)}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h2 className="text-lg font-medium text-gray-900 mb-2">{course.title}</h2>
-                  <p className="text-sm text-gray-600 mb-3">{course.description}</p>
-                  <div className="flex items-center text-xs text-gray-500 space-x-4">
-                    <span>Created {new Date(course?.createdAt).toLocaleDateString()}</span>
-                  </div>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-lg font-medium">{course.title}</h2>
+                  <p className="text-sm text-gray-600">{course.description}</p>
+                  <p className="text-xs text-gray-400 mt-1">Created: {new Date(course.createdAt).toLocaleDateString()}</p>
                 </div>
-                <div className="ml-6 flex-shrink-0">
+                <div>
                   {user?.role === "student" && (
                     <button
                       onClick={(e) => handleEnroll(course._id, course.title, e)}
                       disabled={course.isEnrolled}
-                      className={`px-4 py-2 text-sm rounded-lg ${
-                        course.isEnrolled
-                          ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                          : "bg-black text-white hover:bg-gray-800"
-                      }`}
+                      className={`px-3 py-1 rounded text-sm ${course.isEnrolled ? "bg-gray-200 text-gray-500" : "bg-black text-white hover:bg-gray-800"}`}
                     >
                       {course.isEnrolled ? "Enrolled" : "Enroll"}
                     </button>
                   )}
-                  {user?.role === "instructor" && (
+                  {isInstructor && (
                     <div className="flex space-x-2">
-                      <button
-                        onClick={(e) => startEdit(course, e)}
-                        className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:border-gray-300"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={(e) => showDeleteConfirmation(course._id, course.title, e)}
-                        className="px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:border-red-300"
-                      >
-                        Delete
-                      </button>
+                      <button onClick={(e) => startEdit(course, e)} className="border px-3 py-1 text-sm rounded">Edit</button>
+                      <button onClick={(e) => showDeleteConfirmation(course._id, course.title, e)} className="border px-3 py-1 text-sm text-red-600 rounded">Delete</button>
                     </div>
                   )}
                 </div>
