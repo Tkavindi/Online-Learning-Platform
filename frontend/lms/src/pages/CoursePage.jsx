@@ -12,64 +12,56 @@ const CoursePage = () => {
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, courseId: "", courseTitle: "" });
   const [editingCourse, setEditingCourse] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const BASE_URL = import.meta.env.VITE_BASE_URL;
 
   useEffect(() => {
     if (token && user) {
-      fetchCourses();
+      if (user.role === "instructor") {
+        fetchInstructorCourses();
+      } else {
+        fetchAllCourses();
+      }
     }
   }, [token, user]);
 
-  const fetchCourses = async () => {
+  const fetchInstructorCourses = async () => {
     try {
       setLoading(true);
       setError("");
-
-      let response;
-
-      if (user?.role === "instructor") {
-        response = await axios.get(`${BASE_URL}/api/courses/instructor/${user._id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } else {
-        response = await axios.get(`${BASE_URL}/api/courses/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
-
-      const data = response.data?.courses || [];
-      setCourses(Array.isArray(data) ? data : []);
+      const response = await axios.get(`${BASE_URL}/api/courses/instructor/${user._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCourses(response.data?.courses || []);
     } catch (err) {
-      const status = err.response?.status;
-      if (status && status !== 404) {
-        console.error("Error fetching courses:", err.response?.data || err.message);
-        setError("Failed to load courses. Please try again.");
-      } else {
+      if (err.response?.status === 404) {
         setCourses([]);
         setError("");
+      } else {
+        console.error("Error fetching instructor courses:", err.response?.data || err.message);
+        setError("Failed to load courses. Please try again.");
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const showDialog = (type, title, message) => {
-    setDialog({ show: true, type, title, message });
-  };
-
-  const closeDialog = () => {
-    setDialog({ show: false, type: "", message: "", title: "" });
-  };
-
-  const showDeleteConfirmation = (courseId, courseTitle, e) => {
-    e.stopPropagation();
-    setDeleteConfirm({ show: true, courseId, courseTitle });
-  };
-
-  const closeDeleteConfirmation = () => {
-    setDeleteConfirm({ show: false, courseId: "", courseTitle: "" });
+  const fetchAllCourses = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await axios.get(`${BASE_URL}/api/courses/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCourses(response.data?.courses || []);
+    } catch (err) {
+      console.error("Error fetching courses:", err.response?.data || err.message);
+      setError("Failed to load courses. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCourseClick = (courseId) => {
@@ -79,13 +71,11 @@ const CoursePage = () => {
   const handleEnroll = async (courseId, courseTitle, e) => {
     e.stopPropagation();
     try {
-      await axios.post(
-        `${BASE_URL}/api/enrollments/${courseId}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await axios.post(`${BASE_URL}/api/enrollments/${courseId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       showDialog("success", "Enrollment Successful!", `You have enrolled in "${courseTitle}".`);
-      fetchCourses();
+      fetchAllCourses();
     } catch (err) {
       const errorMessage = err.response?.data?.message || "Failed to enroll in the course.";
       showDialog("error", "Enrollment Failed", errorMessage);
@@ -107,7 +97,7 @@ const CoursePage = () => {
       showDialog("success", `Course ${action}!`, `Course "${formData.title}" has been ${action.toLowerCase()} successfully.`);
       setEditingCourse(null);
       setShowCreateForm(false);
-      fetchCourses();
+      fetchInstructorCourses();
     } catch (err) {
       const errorMessage = err.response?.data?.message || `Failed to ${editingCourse ? "update" : "create"} course.`;
       showDialog("error", `${editingCourse ? "Update" : "Creation"} Failed`, errorMessage);
@@ -121,12 +111,29 @@ const CoursePage = () => {
       });
       showDialog("success", "Course Deleted!", `Course "${deleteConfirm.courseTitle}" has been deleted.`);
       closeDeleteConfirmation();
-      fetchCourses();
+      fetchInstructorCourses();
     } catch (err) {
       const errorMessage = err.response?.data?.message || "Failed to delete course.";
       showDialog("error", "Deletion Failed", errorMessage);
       closeDeleteConfirmation();
     }
+  };
+
+  const showDeleteConfirmation = (courseId, courseTitle, e) => {
+    e.stopPropagation();
+    setDeleteConfirm({ show: true, courseId, courseTitle });
+  };
+
+  const closeDeleteConfirmation = () => {
+    setDeleteConfirm({ show: false, courseId: "", courseTitle: "" });
+  };
+
+  const showDialog = (type, title, message) => {
+    setDialog({ show: true, type, title, message });
+  };
+
+  const closeDialog = () => {
+    setDialog({ show: false, type: "", message: "", title: "" });
   };
 
   const startEdit = (course, e) => {
@@ -151,12 +158,8 @@ const CoursePage = () => {
               Are you sure you want to delete the course <strong>"{courseTitle}"</strong>? This action is permanent.
             </p>
             <div className="flex justify-end space-x-3">
-              <button onClick={onCancel} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:border-gray-400">
-                Cancel
-              </button>
-              <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700">
-                Delete Course
-              </button>
+              <button onClick={onCancel} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:border-gray-400">Cancel</button>
+              <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700">Delete Course</button>
             </div>
           </div>
         </div>
@@ -180,9 +183,7 @@ const CoursePage = () => {
             </div>
             <p className="text-sm text-gray-600 mb-6">{message}</p>
             <div className="flex justify-end">
-              <button onClick={onClose} className={`px-4 py-2 text-sm rounded-lg text-white ${type === "success" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}>
-                OK
-              </button>
+              <button onClick={onClose} className={`px-4 py-2 text-sm rounded-lg text-white ${type === "success" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}>OK</button>
             </div>
           </div>
         </div>
@@ -206,9 +207,7 @@ const CoursePage = () => {
       <div className="min-h-screen bg-white flex items-center justify-center p-6">
         <div className="text-center max-w-md">
           <p className="text-red-600 mb-4">{error}</p>
-          <button onClick={fetchCourses} className="px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800">
-            Try Again
-          </button>
+          <button onClick={user?.role === "instructor" ? fetchInstructorCourses : fetchAllCourses} className="px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800">Try Again</button>
         </div>
       </div>
     );
@@ -249,11 +248,7 @@ const CoursePage = () => {
           </div>
         ) : (
           courses.map((course) => (
-            <div
-              key={course._id}
-              className="border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors cursor-pointer"
-              onClick={() => handleCourseClick(course._id)}
-            >
+            <div key={course._id} className="border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors cursor-pointer" onClick={() => handleCourseClick(course._id)}>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h2 className="text-lg font-medium text-gray-900 mb-2">{course.title}</h2>
@@ -264,32 +259,14 @@ const CoursePage = () => {
                 </div>
                 <div className="ml-6 flex-shrink-0">
                   {user?.role === "student" && (
-                    <button
-                      onClick={(e) => handleEnroll(course._id, course.title, e)}
-                      disabled={course.isEnrolled}
-                      className={`px-4 py-2 text-sm rounded-lg ${
-                        course.isEnrolled
-                          ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                          : "bg-black text-white hover:bg-gray-800"
-                      }`}
-                    >
+                    <button onClick={(e) => handleEnroll(course._id, course.title, e)} disabled={course.isEnrolled} className={`px-4 py-2 text-sm rounded-lg ${course.isEnrolled ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-black text-white hover:bg-gray-800"}`}>
                       {course.isEnrolled ? "Enrolled" : "Enroll"}
                     </button>
                   )}
                   {user?.role === "instructor" && (
                     <div className="flex space-x-2">
-                      <button
-                        onClick={(e) => startEdit(course, e)}
-                        className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:border-gray-300"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={(e) => showDeleteConfirmation(course._id, course.title, e)}
-                        className="px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:border-red-300"
-                      >
-                        Delete
-                      </button>
+                      <button onClick={(e) => startEdit(course, e)} className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:border-gray-300">Edit</button>
+                      <button onClick={(e) => showDeleteConfirmation(course._id, course.title, e)} className="px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:border-red-300">Delete</button>
                     </div>
                   )}
                 </div>
