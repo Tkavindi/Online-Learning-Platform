@@ -25,15 +25,21 @@ const CoursePage = () => {
   const fetchCourses = async () => {
     try {
       setLoading(true);
+      setError(""); // Reset error state
       const response = await axios.get(`${BASE_URL}/api/courses/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log("Courses API Response:", response.data);
       const data = response.data?.courses || response.data || [];
-      setCourses(data);
+      setCourses(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("Error fetching courses:", err.response?.data || err.message);
-      setError("Failed to load courses. Please try again.");
+      const status = err.response?.status;
+      if (status && status !== 404) {
+        console.error("Error fetching courses:", err.response?.data || err.message);
+        setError("Failed to load courses. Please try again.");
+      } else {
+        setCourses([]); // Gracefully handle empty courses
+        setError("");
+      }
     } finally {
       setLoading(false);
     }
@@ -175,7 +181,7 @@ const CoursePage = () => {
   };
 
   const displayCourses = user?.role === "instructor"
-    ? courses // Assuming backend already filters
+    ? courses
     : courses;
 
   if (loading) {
@@ -189,7 +195,7 @@ const CoursePage = () => {
     );
   }
 
-  if (error) {
+  if (error && !courses.length) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-6">
         <div className="text-center max-w-md">
