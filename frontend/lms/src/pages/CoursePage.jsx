@@ -17,19 +17,29 @@ const CoursePage = () => {
   const BASE_URL = import.meta.env.VITE_BASE_URL;
 
   useEffect(() => {
-    if (token) {
+    if (token && user) {
       fetchCourses();
     }
-  }, [token]);
+  }, [token, user]);
 
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      setError(""); // Reset error state
-      const response = await axios.get(`${BASE_URL}/api/courses/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = response.data?.courses || response.data || [];
+      setError("");
+
+      let response;
+
+      if (user?.role === "instructor") {
+        response = await axios.get(`${BASE_URL}/api/courses/instructor/${user._id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } else {
+        response = await axios.get(`${BASE_URL}/api/courses/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+
+      const data = response.data?.courses || [];
       setCourses(Array.isArray(data) ? data : []);
     } catch (err) {
       const status = err.response?.status;
@@ -37,7 +47,7 @@ const CoursePage = () => {
         console.error("Error fetching courses:", err.response?.data || err.message);
         setError("Failed to load courses. Please try again.");
       } else {
-        setCourses([]); // Gracefully handle empty courses
+        setCourses([]);
         setError("");
       }
     } finally {
@@ -180,10 +190,6 @@ const CoursePage = () => {
     );
   };
 
-  const displayCourses = user?.role === "instructor"
-    ? courses
-    : courses;
-
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -217,7 +223,7 @@ const CoursePage = () => {
               {user?.role === "instructor" ? "My Courses" : "Available Courses"}
             </h1>
             <p className="text-sm text-gray-500">
-              {displayCourses.length} course{displayCourses.length !== 1 ? "s" : ""}
+              {courses.length} course{courses.length !== 1 ? "s" : ""}
               {user?.role === "instructor" ? " created" : " available"}
             </p>
           </div>
@@ -230,7 +236,7 @@ const CoursePage = () => {
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        {displayCourses.length === 0 ? (
+        {courses.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 mb-4">
               {user?.role === "instructor" ? "You haven't created any courses yet." : "No courses available yet."}
@@ -242,7 +248,7 @@ const CoursePage = () => {
             )}
           </div>
         ) : (
-          displayCourses.map((course) => (
+          courses.map((course) => (
             <div
               key={course._id}
               className="border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors cursor-pointer"
