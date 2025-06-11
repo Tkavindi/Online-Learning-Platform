@@ -34,7 +34,7 @@ const CoursePage = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
       } else {
-        // Fetch all courses for students
+        // Fetch all courses for students and other roles
         response = await axios.get(`${BASE_URL}/api/courses/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -48,7 +48,6 @@ const CoursePage = () => {
         console.error("Error fetching courses:", err.response?.data || err.message);
         setError("Failed to load courses. Please try again.");
       } else {
-        // If 404 or no courses found, treat as empty list without error
         setCourses([]);
         setError("");
       }
@@ -56,8 +55,6 @@ const CoursePage = () => {
       setLoading(false);
     }
   };
-
-  // -- rest of your code remains unchanged --
 
   const showDialog = (type, title, message) => {
     setDialog({ show: true, type, title, message });
@@ -194,8 +191,6 @@ const CoursePage = () => {
     );
   };
 
-  const displayCourses = courses;
-
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -251,11 +246,11 @@ const CoursePage = () => {
       {/* Show list of courses */}
       {!showCreateForm && (
         <>
-          {displayCourses.length === 0 ? (
+          {courses.length === 0 ? (
             <div className="p-6 text-center text-gray-500">No courses available.</div>
           ) : (
             <div className="p-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-              {displayCourses.map((course) => (
+              {courses.map((course) => (
                 <div
                   key={course._id}
                   className="border rounded-lg p-4 cursor-pointer hover:shadow-lg"
