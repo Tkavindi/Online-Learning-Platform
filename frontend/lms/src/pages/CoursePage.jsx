@@ -3,6 +3,7 @@ import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import CourseForm from "../components/CourseDetails/CourseForm";
+import Dialog from "../components/Common/Dialog";
 
 const CoursePage = () => {
   const [courses, setCourses] = useState([]);
@@ -26,32 +27,80 @@ const CoursePage = () => {
     try {
       setLoading(true);
       setError("");
-
+      
       let response;
-
       if (user.role === "instructor") {
-        response = await axios.get(`${BASE_URL}/api/courses/instructor/${user._id}`, {
+        response = await axios.get(`${BASE_URL}/api/courses/instructor/${user.id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
       } else {
-        response = await axios.get(`${BASE_URL}/api/courses/`, {
+        response = await axios.get(`${BASE_URL}/api/courses`, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }
-
-      const data = response.data?.courses || [];
-      setCourses(Array.isArray(data) ? data : []);
+      
+      setCourses(response.data.courses || []);
     } catch (err) {
-      const status = err.response?.status;
-      if (status && status !== 404) {
-        setError("Failed to load courses. Please try again.");
-        console.error(err);
-      } else {
-        setCourses([]);
-        setError("");
-      }
+      console.error("Error fetching courses:", err);
+      setError("Failed to load courses");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitCourse = async (courseData, isEditing = false) => {
+    try {
+      if (isEditing) {
+        await axios.put(
+          `${BASE_URL}/api/courses/${courseData._id}`,
+          courseData,
+          { headers: { Authorization: `Bearer ${token}` }}
+        );
+        showDialog("success", "Success", "Course updated successfully");
+      } else {
+        await axios.post(
+          `${BASE_URL}/api/courses`,
+          courseData,
+          { headers: { Authorization: `Bearer ${token}` }}
+        );
+        showDialog("success", "Success", "Course created successfully");
+      }
+      setShowCreateForm(false);
+      setEditingCourse(null);
+      fetchCourses();
+    } catch (err) {
+      showDialog("error", "Error", "Failed to save course");
+      console.error(err);
+    }
+  };
+
+  const handleDeleteCourse = async (courseId) => {
+    try {
+      await axios.delete(`${BASE_URL}/api/courses/${courseId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      showDialog("success", "Success", "Course deleted successfully");
+      fetchCourses();
+    } catch (err) {
+      showDialog("error", "Error", "Failed to delete course");
+      console.error(err);
+    }
+    setDeleteConfirm({ show: false, courseId: "", courseTitle: "" });
+  };
+
+  const handleEnroll = async (courseId, courseTitle, e) => {
+    e.preventDefault();
+    try {
+      await axios.post(
+        `${BASE_URL}/api/enrollments`,
+        { courseId },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      showDialog("success", "Success", `Successfully enrolled in ${courseTitle}`);
+      fetchCourses();
+    } catch (err) {
+      showDialog("error", "Error", "Failed to enroll in course");
+      console.error(err);
     }
   };
 
@@ -59,110 +108,8 @@ const CoursePage = () => {
     setDialog({ show: true, type, title, message });
   };
 
-  const closeDialog = () => setDialog({ show: false, type: "", message: "", title: "" });
-
-  const showDeleteConfirmation = (courseId, courseTitle, e) => {
-    e.stopPropagation();
-    setDeleteConfirm({ show: true, courseId, courseTitle });
-  };
-
-  const closeDeleteConfirmation = () => setDeleteConfirm({ show: false, courseId: "", courseTitle: "" });
-
-  const handleCourseClick = (courseId) => navigate(`/courses/${courseId}`);
-
-  const handleEnroll = async (courseId, courseTitle, e) => {
-    e.stopPropagation();
-    try {
-      await axios.post(`${BASE_URL}/api/enrollments/${courseId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      showDialog("success", "Enrollment Successful!", `You have enrolled in "${courseTitle}".`);
-      fetchCourses();
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || "Failed to enroll in the course.";
-      showDialog("error", "Enrollment Failed", errorMessage);
-    }
-  };
-
-  const handleSubmitCourse = async (formData) => {
-    try {
-      const url = editingCourse
-        ? `${BASE_URL}/api/courses/${editingCourse._id}`
-        : `${BASE_URL}/api/courses/`;
-      const method = editingCourse ? "put" : "post";
-
-      await axios[method](url, formData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const action = editingCourse ? "Updated" : "Created";
-      showDialog("success", `Course ${action}!`, `Course "${formData.title}" has been ${action.toLowerCase()} successfully.`);
-      setEditingCourse(null);
-      setShowCreateForm(false);
-      fetchCourses();
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || `Failed to ${editingCourse ? "update" : "create"} course.`;
-      showDialog("error", `${editingCourse ? "Update" : "Creation"} Failed`, errorMessage);
-    }
-  };
-
-  const confirmDeleteCourse = async () => {
-    try {
-      await axios.delete(`${BASE_URL}/api/courses/${deleteConfirm.courseId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      showDialog("success", "Course Deleted!", `Course "${deleteConfirm.courseTitle}" has been deleted.`);
-      closeDeleteConfirmation();
-      fetchCourses();
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || "Failed to delete course.";
-      showDialog("error", "Deletion Failed", errorMessage);
-      closeDeleteConfirmation();
-    }
-  };
-
-  const startEdit = (course, e) => {
-    e.stopPropagation();
-    setEditingCourse(course);
-    setShowCreateForm(true);
-  };
-
-  const cancelEdit = () => {
-    setEditingCourse(null);
-    setShowCreateForm(false);
-  };
-
-  const DeleteConfirmationDialog = ({ show, courseTitle, onConfirm, onCancel }) => {
-    if (!show) return null;
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white p-6 rounded shadow-lg max-w-md w-full">
-          <h2 className="text-lg font-semibold mb-4">Confirm Deletion</h2>
-          <p className="mb-6">Are you sure you want to delete <strong>{courseTitle}</strong>?</p>
-          <div className="flex justify-end space-x-3">
-            <button onClick={onCancel} className="px-4 py-2 border rounded">Cancel</button>
-            <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white rounded">Delete</button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const Dialog = ({ show, type, title, message, onClose }) => {
-    if (!show) return null;
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white p-6 rounded shadow-lg max-w-md w-full">
-          <h2 className={`text-lg font-semibold mb-2 ${type === "success" ? "text-green-600" : "text-red-600"}`}>
-            {title}
-          </h2>
-          <p className="mb-4">{message}</p>
-          <button onClick={onClose} className={`px-4 py-2 text-white rounded ${type === "success" ? "bg-green-600" : "bg-red-600"}`}>
-            OK
-          </button>
-        </div>
-      </div>
-    );
+  const closeDialog = () => {
+    setDialog({ show: false, type: "", message: "", title: "" });
   };
 
   if (loading) {
@@ -173,93 +120,169 @@ const CoursePage = () => {
     );
   }
 
-  if (error && !courses.length) {
+  const isInstructor = user?.role === "instructor";
+  const hasNoCourses = courses.length === 0;
+
+  if (isInstructor && hasNoCourses) {
     return (
-      <div className="flex justify-center items-center min-h-screen flex-col">
-        <p className="text-red-500 mb-4">{error}</p>
-        <button onClick={fetchCourses} className="px-4 py-2 bg-black text-white rounded">Try Again</button>
+      <div className="min-h-screen bg-white py-12">
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <h1 className="text-2xl font-semibold mb-4">Welcome to WiseLearn!</h1>
+          <p className="text-gray-600 mb-8">You haven't created any courses yet.</p>
+          <div className="bg-gray-50 rounded-lg p-8 max-w-lg mx-auto">
+            <div className="mb-6">
+              <svg 
+                className="w-16 h-16 mx-auto mb-4 text-gray-400"
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" 
+                />
+              </svg>
+              <h2 className="text-xl font-medium mb-2">Create Your First Course</h2>
+              <p className="text-gray-600 mb-6">
+                Start sharing your knowledge by creating your first course. 
+                Your expertise could help students achieve their goals.
+              </p>
+              <button 
+                onClick={() => setShowCreateForm(true)}
+                className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                Create First Course
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {showCreateForm && (
+          <CourseForm
+            isEditing={false}
+            onSubmit={handleSubmitCourse}
+            onCancel={() => setShowCreateForm(false)}
+            initialData={null}
+          />
+        )}
+
+        <Dialog
+          show={dialog.show}
+          type={dialog.type}
+          title={dialog.title}
+          message={dialog.message}
+          onClose={closeDialog}
+        />
       </div>
     );
   }
 
-  const isInstructor = user?.role === "instructor";
-  const hasNoCourses = courses.length === 0;
-
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto py-8 px-4 flex justify-between items-center border-b">
-        <div>
-          <h1 className="text-2xl font-semibold">{isInstructor ? "My Courses" : "Available Courses"}</h1>
-          <p className="text-sm text-gray-500">{courses.length} course{courses.length !== 1 ? "s" : ""} {isInstructor ? "created" : "available"}</p>
-        </div>
-        {isInstructor && (
-          <button onClick={() => setShowCreateForm(true)} className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800">
-            Create Course
-          </button>
-        )}
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-4">
-        {hasNoCourses ? (
-          <div className="text-center text-gray-500">
-            <p className="mb-4">{isInstructor ? "You haven't created any courses yet." : "No courses available."}</p>
-            {isInstructor && (
-              <button onClick={() => setShowCreateForm(true)} className="px-4 py-2 bg-black text-white rounded">
-                Create First Course
-              </button>
-            )}
+      <div className="max-w-4xl mx-auto py-8 px-4">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-2xl font-semibold">
+              {isInstructor ? "My Courses" : "Available Courses"}
+            </h1>
+            <p className="text-sm text-gray-500">
+              {courses.length} course{courses.length !== 1 ? "s" : ""} {isInstructor ? "created" : "available"}
+            </p>
           </div>
-        ) : (
-          courses.map((course) => (
+          {isInstructor && (
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              Create New Course
+            </button>
+          )}
+        </div>
+
+        {error && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6">
+            {error}
+          </div>
+        )}
+
+        <div className="grid gap-6">
+          {courses.map((course) => (
             <div
               key={course._id}
-              className="p-4 border rounded hover:shadow cursor-pointer transition"
-              onClick={() => handleCourseClick(course._id)}
+              className="bg-white p-6 rounded-lg border hover:shadow-md transition-shadow"
             >
               <div className="flex justify-between items-start">
                 <div>
                   <h2 className="text-lg font-medium">{course.title}</h2>
                   <p className="text-sm text-gray-600">{course.description}</p>
-                  <p className="text-xs text-gray-400 mt-1">Created: {new Date(course.createdAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Created: {new Date(course.createdAt).toLocaleDateString()}
+                  </p>
                 </div>
-                <div>
-                  {user?.role === "student" && (
+                <div className="flex gap-2">
+                  {isInstructor ? (
+                    <>
+                      <button
+                        onClick={() => {
+                          setEditingCourse(course);
+                          setShowCreateForm(true);
+                        }}
+                        className="text-sm px-3 py-1 text-gray-600 hover:text-black"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirm({
+                          show: true,
+                          courseId: course._id,
+                          courseTitle: course.title
+                        })}
+                        className="text-sm px-3 py-1 text-red-600 hover:text-red-800"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  ) : (
                     <button
                       onClick={(e) => handleEnroll(course._id, course.title, e)}
                       disabled={course.isEnrolled}
-                      className={`px-3 py-1 rounded text-sm ${course.isEnrolled ? "bg-gray-200 text-gray-500" : "bg-black text-white hover:bg-gray-800"}`}
+                      className={`px-3 py-1 rounded text-sm ${
+                        course.isEnrolled
+                          ? "bg-gray-200 text-gray-500"
+                          : "bg-black text-white hover:bg-gray-800"
+                      }`}
                     >
                       {course.isEnrolled ? "Enrolled" : "Enroll"}
                     </button>
                   )}
-                  {isInstructor && (
-                    <div className="flex space-x-2">
-                      <button onClick={(e) => startEdit(course, e)} className="border px-3 py-1 text-sm rounded">Edit</button>
-                      <button onClick={(e) => showDeleteConfirmation(course._id, course.title, e)} className="border px-3 py-1 text-sm text-red-600 rounded">Delete</button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
-          ))
-        )}
+          ))}
+        </div>
       </div>
 
-      {(showCreateForm || editingCourse) && (
+      {showCreateForm && (
         <CourseForm
           isEditing={!!editingCourse}
           onSubmit={handleSubmitCourse}
-          onCancel={cancelEdit}
+          onCancel={() => {
+            setShowCreateForm(false);
+            setEditingCourse(null);
+          }}
           initialData={editingCourse}
-          showDialog={showDialog}
         />
       )}
 
-      <DeleteConfirmationDialog
+      <Dialog
         show={deleteConfirm.show}
-        courseTitle={deleteConfirm.courseTitle}
-        onConfirm={confirmDeleteCourse}
-        onCancel={closeDeleteConfirmation}
+        type="confirm"
+        title="Delete Course"
+        message={`Are you sure you want to delete "${deleteConfirm.courseTitle}"?`}
+        onConfirm={() => handleDeleteCourse(deleteConfirm.courseId)}
+        onCancel={() => setDeleteConfirm({ show: false, courseId: "", courseTitle: "" })}
       />
 
       <Dialog
