@@ -123,27 +123,42 @@ const getCoursesByInstructor = async (req, res) => {
     }
 };
 
-// Get all courses
+// Get all courses - Modified to handle role-based filtering
 const getAllCourses = async (req, res) => {
     const userId = req.user.id;
+    const userRole = req.user.role;
 
     try {
-        const courses = await Course.find();
-        if (courses.length === 0) {
-            return res.status(404).json({ message: 'No courses found' });
+        let courses;
+        
+        if (userRole === 'instructor') {
+            // Instructors see only their own courses
+            courses = await Course.find({ instructor: userId });
+        } else {
+            // Students and other roles see all courses
+            courses = await Course.find();
         }
 
-        // Fetch all enrollments for the current user
-        const enrollments = await Enrollment.find({ student: userId });
-        const enrolledCourseIds = new Set(enrollments.map(e => e.course.toString()));
+        // Always return courses array, even if empty
+        if (courses.length === 0) {
+            return res.status(200).json({ courses: [] });
+        }
 
-        // Map through courses and mark enrollment status
-        const coursesWithEnrollment = courses.map(course => ({
-            ...course.toObject(),
-            isEnrolled: enrolledCourseIds.has(course._id.toString())
-        }));
+        if (userRole === 'student') {
+            // For students, check enrollment status
+            const enrollments = await Enrollment.find({ student: userId });
+            const enrolledCourseIds = new Set(enrollments.map(e => e.course.toString()));
 
-        res.status(200).json({ courses: coursesWithEnrollment });
+            const coursesWithEnrollment = courses.map(course => ({
+                ...course.toObject(),
+                isEnrolled: enrolledCourseIds.has(course._id.toString())
+            }));
+
+            return res.status(200).json({ courses: coursesWithEnrollment });
+        } else {
+            // For instructors, return courses as is
+            return res.status(200).json({ courses });
+        }
     } catch (error) {
         console.error('Get All Courses Error:', error);
         res.status(500).json({ message: 'Server error' });
@@ -159,4 +174,4 @@ module.exports = {
   getCourseById,
   getCoursesByInstructor,
   getAllCourses
-  }
+}
