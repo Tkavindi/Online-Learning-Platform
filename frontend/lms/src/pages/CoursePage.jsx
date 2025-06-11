@@ -17,8 +17,10 @@ const CoursePage = () => {
   const BASE_URL = import.meta.env.VITE_BASE_URL;
 
   useEffect(() => {
-    fetchCourses();
-  }, []);
+    if (token) {
+      fetchCourses();
+    }
+  }, [token]);
 
   const fetchCourses = async () => {
     try {
@@ -26,10 +28,12 @@ const CoursePage = () => {
       const response = await axios.get(`${BASE_URL}/api/courses/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setCourses(response.data.courses || []);
+      console.log("Courses API Response:", response.data);
+      const data = response.data?.courses || response.data || [];
+      setCourses(data);
     } catch (err) {
+      console.error("Error fetching courses:", err.response?.data || err.message);
       setError("Failed to load courses. Please try again.");
-      console.error("Error fetching courses:", err);
     } finally {
       setLoading(false);
     }
@@ -171,7 +175,7 @@ const CoursePage = () => {
   };
 
   const displayCourses = user?.role === "instructor"
-    ? courses.filter((c) => c.instructor === user.id)
+    ? courses // Assuming backend already filters
     : courses;
 
   if (loading) {
@@ -292,14 +296,21 @@ const CoursePage = () => {
           showDialog={showDialog}
         />
       )}
+
       <DeleteConfirmationDialog
         show={deleteConfirm.show}
         courseTitle={deleteConfirm.courseTitle}
         onConfirm={confirmDeleteCourse}
         onCancel={closeDeleteConfirmation}
       />
-      <Dialog show={dialog.show} type={dialog.type} title={dialog.title} message={dialog.message} onClose={closeDialog} />
-      
+
+      <Dialog
+        show={dialog.show}
+        type={dialog.type}
+        title={dialog.title}
+        message={dialog.message}
+        onClose={closeDialog}
+      />
     </div>
   );
 };
